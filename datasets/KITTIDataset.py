@@ -20,6 +20,7 @@ def get_velo(idx, dir, sequence, jitter=False, remove_random_angle=-1, without_g
         velo_path = os.path.join(dir, 'sequences', f'{int(sequence):02d}', 'velodyne', f'{idx:06d}.bin')
         scan = np.fromfile(velo_path, dtype=np.float32)
     scan = scan.reshape((-1, 4))
+    scan = scan[:, :3]
 
     if jitter:
         noise = 0.01 * np.random.randn(scan.shape[0], scan.shape[1]).astype(np.float32)

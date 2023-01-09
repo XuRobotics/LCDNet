@@ -83,10 +83,12 @@ def train(model, optimizer, sample, loss_fn, exp_cfg, device, mode='pairs'):
             positive_transl_i = positive_transl[i]
             positive_rot_i = positive_rot[i]
 
-            anchor_i_reflectance = anchor_i[:, 3].clone()
-            positive_i_reflectance = positive_i[:, 3].clone()
-            anchor_i[:, 3] = 1.
-            positive_i[:, 3] = 1.
+            # anchor_i_reflectance = anchor_i[:, 3].clone()
+            # positive_i_reflectance = positive_i[:, 3].clone()
+            anchor_i = torch.cat((anchor_i, torch.ones(anchor_i.shape[0], 1).to(device)), axis=-1)
+            positive_i = torch.cat((positive_i, torch.ones(positive_i.shape[0], 1).to(device)), axis=-1)
+            # anchor_i[:, 3] = 1.
+            # positive_i[:, 3] = 1.
 
             rt_anchor = get_rt_matrix(anchor_transl_i, anchor_rot_i, rot_parmas='xyz')
             rt_positive = get_rt_matrix(positive_transl_i, positive_rot_i, rot_parmas='xyz')
@@ -106,7 +108,7 @@ def train(model, optimizer, sample, loss_fn, exp_cfg, device, mode='pairs'):
                 rt_anch_augm = get_rt_matrix(T, torch.tensor([rotx, roty, rotz]).to(device))
                 anchor_i = rt_anch_augm.inverse() @ anchor_i.T
                 anchor_i = anchor_i.T
-                anchor_i[:, 3] = anchor_i_reflectance.clone()
+                # anchor_i[:, 3] = anchor_i_reflectance.clone()
 
                 rotz = np.random.rand() * 360 - 180
                 rotz = rotz * (3.141592 / 180.0)
@@ -121,7 +123,7 @@ def train(model, optimizer, sample, loss_fn, exp_cfg, device, mode='pairs'):
                 rt_pos_augm = get_rt_matrix(T, torch.tensor([rotx, roty, rotz]).to(device))
                 positive_i = rt_pos_augm.inverse() @ positive_i.T
                 positive_i = positive_i.T
-                positive_i[:, 3] = positive_i_reflectance.clone()
+                # positive_i[:, 3] = positive_i_reflectance.clone()
 
                 rt_anch_concat = rt_anchor @ rt_anch_augm
                 rt_pos_concat = rt_positive @ rt_pos_augm
@@ -132,6 +134,8 @@ def train(model, optimizer, sample, loss_fn, exp_cfg, device, mode='pairs'):
             else:
                 raise NotImplementedError()
 
+            anchor_i = anchor_i[:, :3]
+            positive_i = positive_i[:, :3]
             anchor_list.append(model.module.backbone.prepare_input(anchor_i))
             positive_list.append(model.module.backbone.prepare_input(positive_i))
             del anchor_i, positive_i
