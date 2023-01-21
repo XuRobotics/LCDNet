@@ -1,18 +1,19 @@
 import pypcd
 import rospy
+import tf
 from sensor_msgs.msg import _PointCloud
 from sensor_msgs import point_cloud2 as pc2
 import rosbag
+
 import math
 import numpy as np
-
 import struct
 
-BAG_FILEPATH = '/mnt/c/mm_data/very-important-3-robot-loop-closure-LOOP2-ONLY-With-Segmentation-falcon_pennovation_2022-05-13-16-27-46.bag'
-INTENSITY_TOPIC = '/os_node/llol_odom/sweep'
-LIDAR_TOPIC = '/os_node/segmented_point_cloud_no_destagger'
+BAG_FILEPATH = '/mnt/c/mm_data/generic_sloam_2022-06-09-10-44-10.bag'
+SEMANTIC_TOPIC = '/os_node/segmented_point_cloud_organized'
+LIDAR_TOPIC = '/os_node/cloud'
 POSE_TOPIC = '/os_node/llol_odom/pose'
-SAMPLE_DIST = 20.0
+SAMPLE_DIST = 5.0
 
 start_pose = None
 prev_pose = None
@@ -22,12 +23,13 @@ sample_lidar = False
 sample_intensity = False
 
 lidar_buffer = []
-intensity_buffer = []
+semantic_buffer = []
 lidar_timestamp = 0
 
 pose_msgs = {}
-intensity_msgs = {}
 lidar_msgs = {}
+semantic_msgs = {}
+
 
 # read bag once and sample poses first
 bag = rosbag.Bag(BAG_FILEPATH)
@@ -50,7 +52,7 @@ for topic, msg, t in bag.read_messages(topics=[POSE_TOPIC]):
             pose_msgs[timestamp] = msg
 
 # read bag again to retrieve corresponding lidar data
-for topic, msg, t in bag.read_messages(topics=[LIDAR_TOPIC, INTENSITY_TOPIC]):
+for topic, msg, t in bag.read_messages(topics=[LIDAR_TOPIC, SEMANTIC_TOPIC]):
     timestamp = int(msg.header.stamp.secs * 1e9 + msg.header.stamp.nsecs)
     timestamp = round(timestamp, -7)
     if timestamp in pose_msgs:
@@ -67,36 +69,54 @@ for topic, msg, t in bag.read_messages(topics=[LIDAR_TOPIC, INTENSITY_TOPIC]):
     if sample:
         if topic == LIDAR_TOPIC:
             lidar_msgs[timestamp] = msg
-        if topic == INTENSITY_TOPIC:
-            intensity_msgs[timestamp] = msg
+        if topic == SEMANTIC_TOPIC:
+            semantic_msgs[timestamp] = msg
     
-print(len(pose_msgs))
-print(len(lidar_msgs))
-print(len(intensity_msgs))
+# print(len(pose_msgs))
+# print(len(lidar_msgs))
+# print(len(semantic_msgs))
+
+t = tf.TransformerROS()
 
 # write kitti format files
+pose_file = open('output/poses.txt', 'w')
 for timestamp in pose_msgs:
-    # intensity
-    intensity_msg = intensity_msgs[timestamp]
-    pc = pc2.read_points(intensity_msg, skip_nans=True, field_names=None)
-    intensity = []
-    for p in pc:
-        intensity.append([p[3]])
+    # semantics
+    # semantic_msg = semantic_msgs[timestamp]
+    # pc = pc2.read_points(semantic_msg, skip_nans=True, field_names=None)
+    # labels = []
+    # for p in pc:
+    #     labels.append([p[3]])
+    
     # x,y,z,label
     lidar_msg = lidar_msgs[timestamp]
     pc = pc2.read_points(lidar_msg, skip_nans=True, field_names=None)
     xyz = []
-    label = []
+    # label = []
     for p in pc:
-        xyz.append([p[0], p[1], p[2]])
-        label.append(p[3])
+        xyz.append([p[0], p[1], p[2], p[3]])
+        # label.append(p[3])
 
-    xyz = np.array(xyz)        
-    intensity = np.array(intensity)
-    print(xyz.shape)
-    print(intensity.shape)
-    xyzi = np.concatenate((xyz, intensity), axis=0)
-    print(xyzi.shape)
-    label = np.array(label)
-    
     # save scan and label
+    xyz = np.array(xyz)        
+    # intensity = np.array(intensity)
+    # print(xyz.shape)
+    xyz.tofile('output/velodyne/' + str(round(timestamp, -7)) + '.bin')
+    # print(intensity.shape)
+    # xyzi = np.concatenate((xyz, intensity), axis=0)
+    # print(xyzi.shape)
+    # label = np.array(label)
+    
+    # save pose
+    pose_msg = pose_msgs[timestamp]
+    # print(pose_msg)
+    kitti_pose_arr = []
+    tx = (pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z)
+    qt = (pose_msg.pose.orientation.x, pose_msg.pose.orientation.y, pose_msg.pose.orientation.z, pose_msg.pose.orientation.w)
+    tf_mat = t.fromTranslationRotation(translation=tx, rotation=qt)
+    
+    pose_file.write(' '.join(map(str, tf_mat.flatten()[:-4])))
+    pose_file.write('\n')
+    # np.savetxt('poses.txt', tf_mat.flatten(), delimiter=' ')
+    
+
