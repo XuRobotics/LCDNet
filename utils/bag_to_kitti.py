@@ -9,12 +9,13 @@ import math
 import numpy as np
 import struct
 
-BAG_FILEPATH = '/mnt/c/mm_data/generic_sloam_2022-06-09-10-44-10.bag'
+BAG_FILEPATH = '/mnt/c/mm_data/logs/generic_sloam_2022-06-09-10-44-10.bag'
 SEMANTIC_TOPIC = '/os_node/segmented_point_cloud_organized'
 LIDAR_TOPIC = '/os_node/cloud'
 POSE_TOPIC = '/os_node/llol_odom/pose'
 SAMPLE_DIST = 5.0
 
+start_time = 0
 start_pose = None
 prev_pose = None
 pose_init = False
@@ -37,6 +38,7 @@ for topic, msg, t in bag.read_messages(topics=[POSE_TOPIC]):
     timestamp = int(msg.header.stamp.secs * 1e9 + msg.header.stamp.nsecs)
     if topic == POSE_TOPIC:
         if not pose_init:
+            start_time = int(msg.header.stamp.secs * 1e9 + msg.header.stamp.nsecs)
             start_pose = msg.pose
             prev_pose = msg.pose
             pose_init = True
@@ -80,6 +82,7 @@ t = tf.TransformerROS()
 
 # write kitti format files
 pose_file = open('output/poses.txt', 'w')
+times_file = open('output/times.txt', 'w')
 for timestamp in pose_msgs:
     # semantics
     # semantic_msg = semantic_msgs[timestamp]
@@ -117,6 +120,7 @@ for timestamp in pose_msgs:
     
     pose_file.write(' '.join(map(str, tf_mat.flatten()[:-4])))
     pose_file.write('\n')
+    times_file.write(str(timestamp - start_time) + '\n')
     # np.savetxt('poses.txt', tf_mat.flatten(), delimiter=' ')
     
 
