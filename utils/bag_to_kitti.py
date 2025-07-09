@@ -8,12 +8,13 @@ import rosbag
 import math
 import numpy as np
 import struct
+import os
 
-BAG_FILEPATH = '../pennovation_dataset/1st-parking-lot-falcon-xmas-slam-pennovation_2023-10-20-13-07-35.bag'
-SEMANTIC_TOPIC = '/os_node/segmented_point_cloud_organized'
-LIDAR_TOPIC = '/os_node/cloud'
-POSE_TOPIC = '/os_node/llol_odom/pose'
-SAMPLE_DIST = 5.0
+BAG_FILEPATH = '../pennovation_dataset/LCDNet-1st-parking-lot-falcon-xmas-slam-pennovation_2023-10-20-13-07-35.bag'
+SEMANTIC_TOPIC = '/os_node/segmented_point_cloud_organized' # ignored
+LIDAR_TOPIC = '/cloud_registered_body'
+POSE_TOPIC = '/Odometry'
+SAMPLE_DIST = 2.0
 
 start_time = 0
 start_pose = None
@@ -31,27 +32,33 @@ pose_msgs = {}
 lidar_msgs = {}
 semantic_msgs = {}
 
+# print something
+print("Converting bag to KITTI format...")
+
 
 # read bag once and sample poses first
 bag = rosbag.Bag(BAG_FILEPATH)
 for topic, msg, t in bag.read_messages(topics=[POSE_TOPIC]):
     timestamp = int(msg.header.stamp.secs * 1e9 + msg.header.stamp.nsecs)
     if topic == POSE_TOPIC:
+        
         if not pose_init:
             start_time = int(msg.header.stamp.secs * 1e9 + msg.header.stamp.nsecs)
-            start_pose = msg.pose
-            prev_pose = msg.pose
+            start_pose = msg.pose.pose
+            prev_pose = msg.pose.pose
             pose_init = True
             continue
         # sample based on pose
-        curr_x, curr_y, curr_z = msg.pose.position.x, msg.pose.position.y, msg.pose.position.z
+        curr_x, curr_y, curr_z = msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z
         prev_x, prev_y, prev_z = prev_pose.position.x, prev_pose.position.y, prev_pose.position.z
         dist = math.sqrt(pow((curr_x - prev_x),2) + pow((curr_y - prev_y), 2) + pow((curr_z - prev_z), 2))
         # print(dist)
         if dist > SAMPLE_DIST:
-            prev_pose = msg.pose
+            print("Sampled pose at timestamp: ", timestamp)
+            print("Pose: ", msg.pose.pose)
+            prev_pose = msg.pose.pose
             timestamp = round(timestamp, -7) # round to nearest millisecond
-            pose_msgs[timestamp] = msg
+            pose_msgs[timestamp] = msg.pose
 
 # read bag again to retrieve corresponding lidar data
 for topic, msg, t in bag.read_messages(topics=[LIDAR_TOPIC, SEMANTIC_TOPIC]):
@@ -74,13 +81,21 @@ for topic, msg, t in bag.read_messages(topics=[LIDAR_TOPIC, SEMANTIC_TOPIC]):
         if topic == SEMANTIC_TOPIC:
             semantic_msgs[timestamp] = msg
     
-# print(len(pose_msgs))
-# print(len(lidar_msgs))
-# print(len(semantic_msgs))
+# print total number of poses and lidar messages sampled
+print("Total poses sampled: ", len(pose_msgs))
+print("Total lidar messages sampled: ", len(lidar_msgs))    
+print("Total semantic messages sampled: ", len(semantic_msgs))
 
 t = tf.TransformerROS()
 
-# write kitti format files
+
+if not os.path.exists('output/velodyne'):
+    os.makedirs('output/velodyne')
+    print("Created output/velodyne directory")
+if not os.path.exists('output'):
+    os.makedirs('output')
+    print("Created output directory")
+
 pose_file = open('output/poses.txt', 'w')
 times_file = open('output/times.txt', 'w')
 for timestamp in pose_msgs:
