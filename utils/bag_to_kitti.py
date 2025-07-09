@@ -10,11 +10,12 @@ import numpy as np
 import struct
 import os
 
-BAG_FILEPATH = '../pennovation_dataset/LCDNet-1st-parking-lot-falcon-xmas-slam-pennovation_2023-10-20-13-07-35.bag'
+BAG_FILEPATH = '../pennovation_dataset/LCDNet-2nd-parking-lot-falcon-xmas-slam-pennovation_2023-10-20-13-00-01.bag'
 SEMANTIC_TOPIC = '/os_node/segmented_point_cloud_organized' # ignored
 LIDAR_TOPIC = '/cloud_registered_body'
 POSE_TOPIC = '/Odometry'
 SAMPLE_DIST = 2.0
+OUTPUT_DIR = 'output'
 
 start_time = 0
 start_pose = None
@@ -89,15 +90,15 @@ print("Total semantic messages sampled: ", len(semantic_msgs))
 t = tf.TransformerROS()
 
 
-if not os.path.exists('output/velodyne'):
-    os.makedirs('output/velodyne')
-    print("Created output/velodyne directory")
-if not os.path.exists('output'):
-    os.makedirs('output')
+if not os.path.exists(OUTPUT_DIR + '/velodyne'):
+    os.makedirs(OUTPUT_DIR + '/velodyne')
+    print("Created velodyne directory in output")
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
     print("Created output directory")
 
-pose_file = open('output/poses.txt', 'w')
-times_file = open('output/times.txt', 'w')
+pose_file = open(OUTPUT_DIR + '/poses.txt', 'w')
+times_file = open(OUTPUT_DIR + '/times.txt', 'w')
 for timestamp in pose_msgs:
     # semantics
     # semantic_msg = semantic_msgs[timestamp]
@@ -119,7 +120,7 @@ for timestamp in pose_msgs:
     xyz = np.array(xyz)        
     # intensity = np.array(intensity)
     # print(xyz.shape)
-    xyz.tofile('output/velodyne/' + str(round(timestamp, -7)) + '.bin')
+    xyz.tofile(OUTPUT_DIR + '/velodyne/' + str(round(timestamp, -7)) + '.bin')
     # print(intensity.shape)
     # xyzi = np.concatenate((xyz, intensity), axis=0)
     # print(xyzi.shape)

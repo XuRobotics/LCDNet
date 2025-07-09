@@ -1,3 +1,24 @@
+# Additional notes:
+```
+cd LCDNet/utils/
+
+# Create target structure outside utils (go up one level)
+mkdir -p ../dataset/sequences/00
+mkdir -p ../dataset/sequences/01
+
+# Copy your output data into the new dataset structure
+cp -r output/velodyne ../dataset/sequences/00/
+cp output/poses.txt ../dataset/sequences/00/
+cp output/times.txt ../dataset/sequences/00/
+
+cp -r output2/velodyne ../dataset/sequences/01/
+cp output2/poses.txt ../dataset/sequences/01/
+cp output2/times.txt ../dataset/sequences/01/
+
+```bash
+
+
+
 # LCDNet: Deep Loop Closure Detection and Point Cloud Registration for LiDAR SLAM  (IEEE T-RO 2022)
 
 Official PyTorch implementation of LCDNet.
