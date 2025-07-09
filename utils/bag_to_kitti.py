@@ -9,7 +9,7 @@ import math
 import numpy as np
 import struct
 
-BAG_FILEPATH = '/mnt/c/mm_data/logs/generic_sloam_2022-06-09-10-44-10.bag'
+BAG_FILEPATH = '../pennovation_dataset/1st-parking-lot-falcon-xmas-slam-pennovation_2023-10-20-13-07-35.bag'
 SEMANTIC_TOPIC = '/os_node/segmented_point_cloud_organized'
 LIDAR_TOPIC = '/os_node/cloud'
 POSE_TOPIC = '/os_node/llol_odom/pose'
